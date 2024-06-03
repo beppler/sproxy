@@ -49,7 +49,6 @@ func (p *Proxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 			r.Context(),
 			slog.LevelError,
 			"error getting hijack interface",
-			slog.String("error", err.Error()),
 		)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
