@@ -16,10 +16,13 @@ import (
 func main() {
 	logger := slog.New(middleware.NewRequestIdHandler(slog.Default().Handler()))
 
+	configuration := &sproxy.Configuration{}
+
 	handler := middleware.NewRequestIdMiddleware(
 		middleware.NewLoggingMiddleware(
 			sproxy.NewProxy(
 				logger,
+				configuration,
 			),
 			logger,
 		),

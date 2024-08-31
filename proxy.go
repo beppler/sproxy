@@ -10,13 +10,14 @@ import (
 )
 
 type Proxy struct {
-	logger *slog.Logger
+	logger        *slog.Logger
+	configuration *Configuration
 }
 
 type ProxyRequestIdGetter func(ctx context.Context) string
 
-func NewProxy(logger *slog.Logger) *Proxy {
-	return &Proxy{logger: logger}
+func NewProxy(logger *slog.Logger, configuration *Configuration) *Proxy {
+	return &Proxy{logger: logger, configuration: configuration}
 }
 
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
