@@ -95,7 +95,7 @@ func (p *Proxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 	// should be w.WriteHeader(http.StatusOK), but the connection is hijacked
 	client.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 
-	err = p.transfer(dest.(ProxyNetConn), client.(ProxyNetConn))
+	err = p.copy(dest.(ProxyNetConn), client.(ProxyNetConn))
 	if err != nil {
 		p.logger.LogAttrs(
 			r.Context(),
@@ -177,7 +177,7 @@ func (p *Proxy) removeHopHeaders(header http.Header) {
 	}
 }
 
-func (p *Proxy) transfer(dst, src ProxyNetConn) error {
+func (p *Proxy) copy(dst, src ProxyNetConn) error {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
