@@ -3,7 +3,6 @@ package wiredialer
 import (
 	"context"
 	"io"
-	"log"
 	"net"
 	"os"
 
@@ -38,8 +37,8 @@ func NewDialerFromFile(path string) (*WireDialer, error) {
 	return NewDialerFromConfiguration(file)
 }
 
-func NewDialerFromConfiguration(config_reader io.Reader) (*WireDialer, error) {
-	iface_addresses, dns_addresses, mtu, ipcConfig, err := config.ParseConfig(config_reader)
+func NewDialerFromConfiguration(reader io.Reader) (*WireDialer, error) {
+	iface_addresses, dns_addresses, mtu, ipcConfig, err := config.ParseConfig(reader)
 	if err != nil {
 		return nil, err
 	}
@@ -49,13 +48,22 @@ func NewDialerFromConfiguration(config_reader io.Reader) (*WireDialer, error) {
 		dns_addresses,
 		mtu)
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
+
 	dev := device.NewDevice(tun, conn.NewDefaultBind(), device.NewLogger(device.LogLevelError, ""))
+
 	err = dev.IpcSet(ipcConfig)
+	if err != nil {
+		tun.Close()
+		return nil, err
+	}
+
 	err = dev.Up()
 	if err != nil {
-		log.Panic(err)
+		dev.Close()
+		tun.Close()
+		return nil, err
 	}
 
 	return &WireDialer{
