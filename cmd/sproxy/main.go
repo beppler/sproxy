@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"log/slog"
@@ -48,7 +49,8 @@ func main() {
 	logger.Info("service started")
 
 	server := &http.Server{
-		Handler: handler,
+		Handler:      handler,
+		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler)),
 	}
 
 	serverStopped := make(chan any)
