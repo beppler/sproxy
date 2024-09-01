@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"log/slog"
 	"net"
 	"net/http"
@@ -16,22 +17,28 @@ import (
 func main() {
 	logger := slog.New(middleware.NewRequestIdHandler(slog.Default().Handler()))
 
-	configuration := &sproxy.Configuration{}
+	address := flag.String("address", "localhost:1357", "address to listen on")
+	configuration := flag.String("configuration", "wg0.conf", "path to wireguard configuration file")
+
+	flag.Parse()
+
+	proxy, err := sproxy.NewProxy(logger, *configuration)
+	if err != nil {
+		logger.Error("error creating proxy", "error", err)
+		os.Exit(1)
+	}
 
 	handler := middleware.NewRequestIdMiddleware(
 		middleware.NewLoggingMiddleware(
-			sproxy.NewProxy(
-				logger,
-				configuration,
-			),
+			proxy,
 			logger,
 		),
 		false,
 	)
 
-	logger.Info("starting service")
+	logger.Info("starting service", "address", *address)
 
-	listener, err := net.Listen("tcp", "localhost:8076")
+	listener, err := net.Listen("tcp", *address)
 	if err != nil {
 		logger.Error("error starting server", "error", err)
 		os.Exit(1)

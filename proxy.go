@@ -2,22 +2,41 @@ package sproxy
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/beppler/sproxy/internal/wiredialer"
 )
 
 type Proxy struct {
-	logger        *slog.Logger
-	configuration *Configuration
+	logger    *slog.Logger
+	dialer    *wiredialer.WireDialer
+	transport *http.Transport
 }
 
 type ProxyRequestIdGetter func(ctx context.Context) string
 
-func NewProxy(logger *slog.Logger, configuration *Configuration) *Proxy {
-	return &Proxy{logger: logger, configuration: configuration}
+func NewProxy(logger *slog.Logger, configuration string) (*Proxy, error) {
+	dialer, err := wiredialer.NewDialerFromFile(configuration)
+	if err != nil {
+		return nil, fmt.Errorf("error creating wireguard dialer: %w", err)
+	}
+
+	transport := &http.Transport{
+		Proxy:                 http.ProxyFromEnvironment,
+		DialContext:           dialer.DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+
+	return &Proxy{logger: logger, dialer: dialer, transport: transport}, nil
 }
 
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +50,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Proxy) handleConnect(w http.ResponseWriter, r *http.Request) {
-	dest, err := net.DialTimeout("tcp", r.Host, 10*time.Second)
+	dest, err := p.dialer.DialContext(r.Context(), "tcp", r.Host)
 	if err != nil {
 		p.logger.LogAttrs(
 			r.Context(),
@@ -70,7 +89,7 @@ func (p *Proxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 	// should be w.WriteHeader(http.StatusOK), but the connection is hijacked
 	client.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 
-	err = p.transfer(dest.(*net.TCPConn), client.(*net.TCPConn))
+	err = p.transfer(dest, client)
 	if err != nil {
 		p.logger.LogAttrs(
 			r.Context(),
@@ -85,7 +104,7 @@ func (p *Proxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 func (p *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	p.removeHopHeaders(r.Header)
 
-	response, err := http.DefaultTransport.RoundTrip(r)
+	response, err := p.transport.RoundTrip(r)
 	if err != nil {
 		p.logger.LogAttrs(
 			r.Context(),
@@ -152,15 +171,15 @@ func (p *Proxy) removeHopHeaders(header http.Header) {
 	}
 }
 
-func (p *Proxy) transfer(dst, src *net.TCPConn) error {
+func (p *Proxy) transfer(dst, src net.Conn) error {
 	defer dst.Close()
 	defer src.Close()
 
 	done := make(chan error, 2)
 
-	copy := func(dst, src *net.TCPConn) {
+	copy := func(dst, src net.Conn) {
 		_, err := io.Copy(dst, src)
-		dst.CloseWrite()
+		dst.Close()
 		done <- err
 	}
 
