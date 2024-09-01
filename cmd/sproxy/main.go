@@ -19,10 +19,11 @@ func main() {
 
 	address := flag.String("address", "localhost:1357", "address to listen on")
 	configuration := flag.String("configuration", "wg0.conf", "path to wireguard configuration file")
+	proxyPac := flag.String("proxy-pac", "", "path to proxy.pac file")
 
 	flag.Parse()
 
-	proxy, err := sproxy.NewProxy(logger, *configuration)
+	proxy, err := sproxy.NewProxy(logger, *configuration, *proxyPac)
 	if err != nil {
 		logger.Error("error creating proxy", "error", err)
 		os.Exit(1)

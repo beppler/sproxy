@@ -17,6 +17,7 @@ type Proxy struct {
 	logger    *slog.Logger
 	dialer    *wiredialer.WireDialer
 	transport *http.Transport
+	proxyPac  string
 }
 
 type ProxyRequestIdGetter func(ctx context.Context) string
@@ -26,7 +27,7 @@ type ProxyNetConn interface {
 	CloseWrite() error
 }
 
-func NewProxy(logger *slog.Logger, configuration string) (*Proxy, error) {
+func NewProxy(logger *slog.Logger, configuration string, proxyPac string) (*Proxy, error) {
 	dialer, err := wiredialer.NewDialerFromFile(configuration)
 	if err != nil {
 		return nil, fmt.Errorf("error creating wireguard dialer: %w", err)
@@ -42,7 +43,7 @@ func NewProxy(logger *slog.Logger, configuration string) (*Proxy, error) {
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 
-	return &Proxy{logger: logger, dialer: dialer, transport: transport}, nil
+	return &Proxy{logger: logger, dialer: dialer, transport: transport, proxyPac: proxyPac}, nil
 }
 
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -50,6 +51,8 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		p.handleConnect(w, r)
 	} else if r.URL.IsAbs() {
 		p.handleRequest(w, r)
+	} else if r.Method == http.MethodGet && r.URL.Path == "/proxy.pac" && p.proxyPac != "" {
+		http.ServeFile(w, r, p.proxyPac)
 	} else {
 		p.handleNotAllowed(w, r)
 	}
