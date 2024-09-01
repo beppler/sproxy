@@ -43,10 +43,7 @@ func NewDialerFromConfiguration(reader io.Reader) (*WireDialer, error) {
 		return nil, err
 	}
 
-	tun, tnet, err := netstack.CreateNetTUN(
-		iface_addresses,
-		dns_addresses,
-		mtu)
+	tun, tnet, err := netstack.CreateNetTUN(iface_addresses, dns_addresses, mtu)
 	if err != nil {
 		return nil, err
 	}
