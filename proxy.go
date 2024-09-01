@@ -24,6 +24,7 @@ type ProxyRequestIdGetter func(ctx context.Context) string
 
 type ProxyNetConn interface {
 	net.Conn
+	CloseRead() error
 	CloseWrite() error
 }
 
@@ -188,12 +189,16 @@ func (p *Proxy) copy(dst, src ProxyNetConn) error {
 	go func() {
 		_, errSrcToDest = io.Copy(src, dst)
 		dst.CloseWrite()
+		src.CloseRead()
+		wg.Done()
 	}()
 
 	var errDstToSrc error = nil
 	go func() {
 		_, errDstToSrc = io.Copy(dst, src)
 		src.CloseWrite()
+		dst.CloseRead()
+		wg.Done()
 	}()
 
 	wg.Wait()
