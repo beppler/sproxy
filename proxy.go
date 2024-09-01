@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/beppler/sproxy/internal/wiredialer"
@@ -19,6 +20,11 @@ type Proxy struct {
 }
 
 type ProxyRequestIdGetter func(ctx context.Context) string
+
+type ProxyNetConn interface {
+	net.Conn
+	CloseWrite() error
+}
 
 func NewProxy(logger *slog.Logger, configuration string) (*Proxy, error) {
 	dialer, err := wiredialer.NewDialerFromFile(configuration)
@@ -89,7 +95,7 @@ func (p *Proxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 	// should be w.WriteHeader(http.StatusOK), but the connection is hijacked
 	client.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 
-	err = p.transfer(dest, client)
+	err = p.transfer(dest.(ProxyNetConn), client.(ProxyNetConn))
 	if err != nil {
 		p.logger.LogAttrs(
 			r.Context(),
@@ -171,30 +177,33 @@ func (p *Proxy) removeHopHeaders(header http.Header) {
 	}
 }
 
-func (p *Proxy) transfer(dst, src net.Conn) error {
-	defer dst.Close()
-	defer src.Close()
+func (p *Proxy) transfer(dst, src ProxyNetConn) error {
+	var wg sync.WaitGroup
+	wg.Add(2)
 
-	done := make(chan error, 2)
+	var errSrcToDest error = nil
+	go func() {
+		_, errSrcToDest = io.Copy(src, dst)
+		dst.CloseWrite()
+	}()
 
-	copy := func(dst, src net.Conn) {
-		_, err := io.Copy(dst, src)
-		dst.Close()
-		done <- err
+	var errDstToSrc error = nil
+	go func() {
+		_, errDstToSrc = io.Copy(dst, src)
+		src.CloseWrite()
+	}()
+
+	wg.Wait()
+
+	dst.Close()
+	src.Close()
+
+	if errSrcToDest != nil {
+		return errSrcToDest
 	}
 
-	go copy(dst, src)
-	go copy(src, dst)
-
-	err1 := <-done
-	err2 := <-done
-
-	if err1 != nil {
-		return err1
-	}
-
-	if err2 != nil {
-		return err2
+	if errDstToSrc != nil {
+		return errDstToSrc
 	}
 
 	return nil
