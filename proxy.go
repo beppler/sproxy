@@ -22,7 +22,7 @@ type Proxy struct {
 
 type ProxyRequestIdGetter func(ctx context.Context) string
 
-type ProxyNetConn interface {
+type ProxyConn interface {
 	net.Conn
 	CloseRead() error
 	CloseWrite() error
@@ -99,7 +99,7 @@ func (p *Proxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 	// should be w.WriteHeader(http.StatusOK), but the connection is hijacked
 	client.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 
-	err = p.copy(dest.(ProxyNetConn), client.(ProxyNetConn))
+	err = p.copy(dest.(ProxyConn), client.(ProxyConn))
 	if err != nil {
 		p.logger.LogAttrs(
 			r.Context(),
@@ -181,7 +181,7 @@ func (p *Proxy) removeHopHeaders(header http.Header) {
 	}
 }
 
-func (p *Proxy) copy(dst, src ProxyNetConn) error {
+func (p *Proxy) copy(dst, src ProxyConn) error {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
