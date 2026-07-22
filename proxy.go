@@ -1,7 +1,6 @@
 package sproxy
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -19,8 +18,6 @@ type Proxy struct {
 	transport *http.Transport
 	proxyPac  string
 }
-
-type ProxyRequestIdGetter func(ctx context.Context) string
 
 type ProxyConn interface {
 	net.Conn
