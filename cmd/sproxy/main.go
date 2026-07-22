@@ -33,6 +33,7 @@ func main() {
 	logging := middleware.NewLoggingMiddleware(proxy, logger)
 	handler := middleware.NewRequestIdMiddleware(logging, false)
 
+	// serve sproxy requests
 	if err := httpgrace.ListenAndServe(address, handler, httpgrace.WithLogger(logger)); err != nil {
 		logger.Error("error running proxy", "error", err)
 		os.Exit(1)
