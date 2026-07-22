@@ -16,7 +16,7 @@ func main() {
 
 	flag.StringVar(&address, "address", "localhost:1357", "address to listen on")
 	flag.StringVar(&configurationFile, "configuration", "wg0.conf", "path to wireguard configuration file")
-	flag.StringVar(&pacFile, "proxy-pac", "", "path to proxy.pac file")
+	flag.StringVar(&pacFile, "proxy-pac", "proxy.pac", "path to proxy.pac file")
 
 	flag.Parse()
 
