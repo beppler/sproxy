@@ -24,7 +24,7 @@ func main() {
 
 	flag.Parse()
 
-	proxy, err := sproxy.NewProxy(logger, *configuration, *proxyPac)
+	proxy, err := sproxy.NewProxyFromFile(logger, *configuration, *proxyPac)
 	if err != nil {
 		logger.Error("error creating proxy", "error", err)
 		os.Exit(1)

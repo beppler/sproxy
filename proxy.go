@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/beppler/sproxy/internal/wiredialer"
+	"github.com/botanica-consulting/wiredialer"
 )
 
 type Proxy struct {
@@ -28,7 +28,7 @@ type ProxyConn interface {
 	CloseWrite() error
 }
 
-func NewProxy(logger *slog.Logger, configuration string, proxyPac string) (*Proxy, error) {
+func NewProxyFromFile(logger *slog.Logger, configuration string, proxyPac string) (*Proxy, error) {
 	dialer, err := wiredialer.NewDialerFromFile(configuration)
 	if err != nil {
 		return nil, fmt.Errorf("error creating wireguard dialer: %w", err)
