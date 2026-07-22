@@ -4,6 +4,7 @@ go 1.26.3
 
 require (
 	github.com/botanica-consulting/wiredialer v0.0.0-20260114131225-7022955cafe8
+	github.com/enrichman/httpgrace v0.2.0
 	github.com/oklog/ulid/v2 v2.1.0
 )
 
