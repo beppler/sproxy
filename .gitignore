@@ -28,5 +28,6 @@ go.work
 
 .vscode/
 
-proxy.pac
-wg*.conf
+/wgproxy
+/proxy.pac
+/wg*.conf
