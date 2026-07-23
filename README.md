@@ -1,4 +1,4 @@
-# sproxy
+# wgproxy
 
 This will be a configurable proxy server that can use [WireGuard](https://www.wireguard.com/) protocol to connect the servers.
 

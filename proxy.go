@@ -1,4 +1,4 @@
-package sproxy
+package wgproxy
 
 import (
 	"fmt"

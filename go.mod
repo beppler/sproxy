@@ -1,4 +1,4 @@
-module github.com/beppler/sproxy
+module github.com/beppler/wgproxy
 
 go 1.26.3
 
